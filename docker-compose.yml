@@ -7,6 +7,7 @@ services:
       - PGID=${PGID:-1000}
       - TZ=${TZ:-Etc/UTC}
       - WEBUI_PORT=${QBITTORRENT_WEBUI_PORT:-8080}
+      - UMASK_SET=002
     volumes:
       - qbittorrent_config:/config
       - downloads:/downloads
@@ -23,6 +24,7 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ:-Etc/UTC}
+      - UMASK_SET=002
     volumes:
       - jellyfin_config:/config
       - downloads:/media
