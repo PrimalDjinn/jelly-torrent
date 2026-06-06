@@ -40,7 +40,7 @@ services:
       - UMASK_SET=002
     volumes:
       - M:/qbittorrent/config:/config
-      - M:/media:/downloads
+      - M:/media/downloads:/downloads
     ports:
       - "6881:6881"
       - "6881:6881/udp"
