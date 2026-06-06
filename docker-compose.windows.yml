@@ -1,0 +1,85 @@
+services:
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    command:
+      - "--log.level=DEBUG"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
+    environment:
+      - CF_DNS_API_TOKEN=${CF_API_TOKEN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-letsencrypt:/letsencrypt   # forward slashes required on Windows
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:${QBITTORRENT_VERSION:-latest}
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - WEBUI_PORT=${QBITTORRENT_WEBUI_PORT:-8080}
+      - UMASK_SET=002
+    volumes:
+      - M:/qbittorrent/config:/config
+      - M:/media:/media
+    ports:
+      - "6881:6881"
+      - "6881:6881/udp"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qbittorrent.rule=Host(`${QBITTORRENT_DOMAIN:-torrent.localhost}`)"
+      - "traefik.http.routers.qbittorrent.entrypoints=websecure"
+      - "traefik.http.routers.qbittorrent.tls.certresolver=cloudflare"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:${JELLYFIN_VERSION:-latest}
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+      - UMASK_SET=002
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    volumes:
+      - M:/jellyfin/config:/config
+      - M:/media:/media
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`${JELLYFIN_DOMAIN:-jellyfin.localhost}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=cloudflare"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, video, compute, utility]
+    restart: unless-stopped
+
+
+volumes:
+  traefik-letsencrypt:
