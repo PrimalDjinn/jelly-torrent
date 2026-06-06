@@ -60,8 +60,9 @@ services:
       - PGID=${PGID:-1000}
       - TZ=${TZ:-Etc/UTC}
       - UMASK_SET=002
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+      # Uncomment with nvidia card
+      # - NVIDIA_VISIBLE_DEVICES=all
+      # - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
     volumes:
       - M:/jellyfin/config:/config
       - M:/media:/media
